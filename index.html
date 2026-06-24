@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewAge Clan - Sorteios Tokyo Ghoul</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Load Firebase SDKs Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0b0e;
+            --card-bg: rgba(18, 18, 24, 0.75);
+            --primary-color: #ff1e31;
+            --primary-glow: rgba(255, 30, 49, 0.4);
+            --text-color: #e5e7eb;
+            --text-muted: #9ca3af;
+            --input-bg: #14141c;
+            --border-color: #24242d;
+            --success-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient glowing background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--primary-color) 0%, rgba(255, 30, 49, 0) 70%);
+            top: 15%;
+            left: 10%;
+            opacity: 0.15;
+            filter: blur(50px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--primary-color) 0%, rgba(255, 30, 49, 0) 70%);
+            bottom: 10%;
+            right: 5%;
+            opacity: 0.12;
+            filter: blur(60px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Language Switcher */
+        .lang-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .lang-btn {
+            background-color: #161622;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn:hover, .lang-btn.active {
+            color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 8px var(--primary-glow);
+            background-color: rgba(255, 30, 49, 0.1);
+        }
+
+        /* Container Card */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            width: 100%;
+            max-width: 550px;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(255, 30, 49, 0.05);
+            z-index: 1;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 30, 49, 0.3);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 30, 49, 0.1);
+        }
+
+        /* Header design */
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #111, var(--primary-color));
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+            border: 2px solid var(--primary-color);
+        }
+
+        .logo-icon {
+            font-size: 40px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); text-shadow: 0 0 12px var(--primary-color); }
+        }
+
+        .clan-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .clan-subtitle {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary-color);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Raffle Info Area */
+        .raffle-details {
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 0;
+            margin-bottom: 25px;
+        }
+
+        .raffle-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .raffle-title i {
+            color: var(--primary-color);
+        }
+
+        .raffle-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+
+        .raffle-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meta-item i {
+            color: var(--primary-color);
+        }
+
+        .meta-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            display: block;
+        }
+
+        .meta-value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Image Display */
+        .raffle-image {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 14px 15px 14px 45px;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(255, 30, 49, 0.2);
+            background-color: #181822;
+        }
+
+        .form-input:focus + .input-icon {
+            color: var(--primary-color);
+        }
+
+        /* Action Button */
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #cc1423, var(--primary-color));
+            color: #fff;
+            border: none;
+            padding: 15px;
+            font-size: 15px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(255, 30, 49, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 30, 49, 0.5);
+            background: linear-gradient(135deg, var(--primary-color), #ff4d5a);
+        }
+
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #24242d;
+            box-shadow: none;
+        }
+
+        /* Alerts */
+        .alert {
+            display: none;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            align-items: flex-start;
+            gap: 12px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            color: #a7f3d0;
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        .alert i {
+            margin-top: 3px;
+            font-size: 16px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5s); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Footer */
+        .footer-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-top: 25px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Loading Overlay */
+        .loading-view {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 4px solid rgba(255, 30, 49, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Language Selector -->
+    <div class="lang-container">
+        <button class="lang-btn active" onclick="setLanguage('PT')">PT</button>
+        <button class="lang-btn" onclick="setLanguage('EN')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('ES')">ES</button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="card">
+        
+        <!-- App Title Header -->
+        <div class="header">
+            <div class="logo-container">
+                <i class="fa-solid fa-mask logo-icon"></i>
+            </div>
+            <h1 class="clan-title">NewAge</h1>
+            <div class="clan-subtitle" id="label-subtitle">Tokyo Ghoul: Break the Chain</div>
+        </div>
+
+        <!-- Alert Notification -->
+        <div id="alert-box" class="alert">
+            <i id="alert-icon" class="fa-solid"></i>
+            <div id="alert-message"></div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-view">
+            <div class="spinner"></div>
+            <p id="label-loading">Carregando informações do sorteio...</p>
+        </div>
+
+        <!-- Error State if not found -->
+        <div id="error-state" class="loading-view hidden">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size: 40px; color: var(--primary-color); margin-bottom: 15px;"></i>
+            <p id="label-error">Sorteio não encontrado ou ID inválido.</p>
+        </div>
+
+        <!-- Raffle Content & Form -->
+        <div id="raffle-content" class="hidden">
+            <div class="raffle-details">
+                <h2 class="raffle-title" id="raffle-title-display">
+                    <i class="fa-solid fa-gift"></i> <span>--</span>
+                </h2>
+                <p class="raffle-desc" id="raffle-desc-display">--</p>
+                <img id="raffle-image-display" class="raffle-image hidden" src="" alt="Sorteio">
+
+                <div class="raffle-meta" style="margin-top: 15px;">
+                    <div>
+                        <span class="meta-label" id="label-meta-ends">Termina em:</span>
+                        <span class="meta-value" id="raffle-end-display">--</span>
+                    </div>
+                    <div>
+                        <span class="meta-label" id="label-meta-participants">Participantes:</span>
+                        <span class="meta-value" id="raffle-count-display">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participation Form -->
+            <form id="participation-form" onsubmit="submitForm(event)">
+                <div class="form-group">
+                    <label class="form-label" for="discord-name" id="label-discord-field">Nome no Discord</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" type="text" id="discord-name" required placeholder="Seu Nome do Discord (Ex: Kaneki#1234)">
+                        <i class="fa-brands fa-discord input-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="game-uid" id="label-uid-field">UID no Jogo (Opcional)</label>
+                    <div class="input-wrapper">
+                        <input class="form-input" type="text" id="game-uid" placeholder="Seu UID in-game (Ex: 87654321)">
+                        <i class="fa-solid fa-id-card input-icon"></i>
+                    </div>
+                </div>
+
+                <button class="btn-submit" type="submit" id="btn-submit-text">
+                    <i class="fa-solid fa-circle-check"></i> PARTICIPAR DO SORTEIO 🎁
+                </button>
+            </form>
+        </div>
+
+        <div class="footer-text" id="label-footer">
+            Clã NewAge • Tokyo Ghoul: Break the Chain
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const L10n = {
+            PT: {
+                subtitle: "Tokyo Ghoul: Break the Chain",
+                raffle_not_found: "Sorteio não encontrado ou já finalizado no banco de dados.",
+                loading: "Carregando informações do sorteio...",
+                closed: "Este sorteio já foi encerrado!",
+                discord_placeholder: "Seu Nome do Discord (Ex: Kaneki#1234)",
+                uid_placeholder: "Seu UID in-game (Ex: 87654321)",
+                discord_label: "Nome no Discord",
+                uid_label: "UID no Jogo (Opcional)",
+                button_join: "PARTICIPAR DO SORTEIO 🎁",
+                button_joining: "PROCESSANDO... ⏳",
+                success_title: "Inscrição Confirmada! 🎉",
+                success_desc: "Você foi inscrito no sorteio com sucesso! Boa sorte, Ghoul! ⚔️",
+                already_participating: "Você já está inscrito neste sorteio!",
+                empty_fields: "Por favor, preencha o seu nome do Discord para participar.",
+                ends_at: "Termina em:",
+                participants_count: "Participantes:"
+            },
+            EN: {
+                subtitle: "Tokyo Ghoul: Break the Chain",
+                raffle_not_found: "Raffle not found or already completed in the database.",
+                loading: "Loading raffle details...",
+                closed: "This raffle is already closed!",
+                discord_placeholder: "Your Discord Name (e.g., Kaneki#1234)",
+                uid_placeholder: "Your In-game UID (e.g., 87654321)",
+                discord_label: "Discord Username",
+                uid_label: "In-game UID (Optional)",
+                button_join: "ENTER THE RAFFLE 🎁",
+                button_joining: "PROCESSING... ⏳",
+                success_title: "Entry Confirmed! 🎉",
+                success_desc: "You have successfully entered the raffle! Good luck, Ghoul! ⚔️",
+                already_participating: "You are already registered for this raffle!",
+                empty_fields: "Please fill in your Discord username to enter.",
+                ends_at: "Ends at:",
+                participants_count: "Participants:"
+            },
+            ES: {
+                subtitle: "Tokyo Ghoul: Break the Chain",
+                raffle_not_found: "Sorteo no encontrado o ya finalizado en la base de datos.",
+                loading: "Cargando detalles del sorteo...",
+                closed: "¡Este sorteo ya ha cerrado!",
+                discord_placeholder: "Tu Nombre de Discord (Ej: Kaneki#1234)",
+                uid_placeholder: "Tu UID in-game (Ej: 87654321)",
+                discord_label: "Nombre de Discord",
+                uid_label: "UID en el Juego (Opcional)",
+                button_join: "PARTICIPAR EN EL SORTEO 🎁",
+                button_joining: "PROCESANDO... ⏳",
+                success_title: "¡Inscripción Confirmada! 🎉",
+                success_desc: "¡Te has inscrito en el sorteo correctamente! ¡Buena suerte, Ghoul! ⚔️",
+                already_participating: "¡Ya estás registrado en este sorteo!",
+                empty_fields: "Por favor, completa tu nombre de Discord para participar.",
+                ends_at: "Termina el:",
+                participants_count: "Participantes:"
+            }
+        };
+
+        let currentLang = 'PT';
+        let currentRaffleItem = null;
+        let db = null;
+        let raffleDocKey = '';
+
+        // Initialize Firebase with real config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDO7A8Ut55zsrpX9_mos6XHN8-PdsZyRT0",
+            authDomain: "newage-7fc5f.firebaseapp.com",
+            projectId: "newage-7fc5f",
+            storageBucket: "newage-7fc5f.firebasestorage.app"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } catch (e) {
+            console.error("Firebase init failed:", e);
+        }
+
+        // Set Language
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Toggle active classes
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.innerText === lang) btn.classList.add('active');
+            });
+
+            // Update Static Texts
+            document.getElementById('label-subtitle').innerText = L10n[lang].subtitle;
+            document.getElementByI
